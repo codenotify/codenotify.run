@@ -1,0 +1,28 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Build the binary and start the web server
+    deps: [build]
+    cmds:
+      - .bin/codenotifyd
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -v
+        -ldflags '
+        -X "{{.PKG_PATH}}.BuildTime={{.BUILD_TIME}}"
+        -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
+        '
+        -trimpath -o .bin/codenotifyd
+    vars:
+      PKG_PATH: github.com/codenotify/codenotify.run/internal/conf
+      BUILD_TIME:
+        sh: date -u '+%Y-%m-%d %I:%M:%S %Z'
+      BUILD_COMMIT:
+        sh: git rev-parse HEAD
+    sources:
+      - go.mod
+      - ./**/*.go
+    method: timestamp
