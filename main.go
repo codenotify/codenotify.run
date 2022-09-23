@@ -46,8 +46,8 @@ func main() {
 			var payload struct {
 				Action      string `json:"action"`
 				PullRequest struct {
-					URL    string `json:"url"`
-					Number int    `json:"number"`
+					HTMLURL string `json:"html_url"`
+					Number  int    `json:"number"`
 				} `json:"pull_request"`
 				Repository struct {
 					Name  string `json:"name"`
@@ -81,11 +81,11 @@ func main() {
 					payload.PullRequest.Number,
 				)
 				if err != nil {
-					log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.URL, err)
+					log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
 					return
 				}
 
-				log.Info("Created comment on pull request %s", payload.PullRequest.URL)
+				log.Info("Created comment on pull request %s", payload.PullRequest.HTMLURL)
 			}()
 			return http.StatusAccepted, http.StatusText(http.StatusAccepted)
 		}
