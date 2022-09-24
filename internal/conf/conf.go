@@ -19,14 +19,17 @@ var (
 	BuildCommit string
 )
 
-// Config contains the configuration information.
+// Config contains all the configuration.
 type Config struct {
-	GitHubApp struct {
-		AppID        int64  `ini:"APP_ID"`
-		ClientID     string `ini:"CLIENT_ID"`
-		ClientSecret string
-		PrivateKey   string
-	}
+	GitHubApp
+}
+
+// GitHubApp contains the GitHub App configuration.
+type GitHubApp struct {
+	AppID        int64  `ini:"APP_ID"`
+	ClientID     string `ini:"CLIENT_ID"`
+	ClientSecret string
+	PrivateKey   string
 }
 
 // Load loads configuration from file.

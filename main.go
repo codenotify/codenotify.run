@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/flamego/flamego"
@@ -41,63 +43,38 @@ func main() {
 		event := r.Header.Get("X-GitHub-Event")
 		log.Trace("Received event: %s", event)
 
-		switch event {
-		case "pull_request":
-			var payload struct {
-				Action      string `json:"action"`
-				PullRequest struct {
-					HTMLURL string `json:"html_url"`
-					Number  int    `json:"number"`
-				} `json:"pull_request"`
-				Repository struct {
-					Name  string `json:"name"`
-					Owner struct {
-						Login string `json:"login"`
-					} `json:"owner"`
-				} `json:"repository"`
-				Installation struct {
-					ID int64 `json:"id"`
-				} `json:"installation"`
-			}
-			err = json.NewDecoder(r.Body).Decode(&payload)
-			if err != nil {
-				return http.StatusBadRequest, fmt.Sprintf("Failed to decode payload: %v", err)
-			}
-			if payload.Action != "opened" {
-				return http.StatusOK, fmt.Sprintf("Event %q with action %q has been received but nothing to do", event, payload.Action)
-			}
-
-			if payload.Installation.ID <= 0 {
-				return http.StatusBadRequest, "No installation ID"
-			}
-
-			go func() {
-				err = createPullRequestComment(
-					config.GitHubApp.AppID,
-					payload.Installation.ID,
-					config.GitHubApp.PrivateKey,
-					payload.Repository.Owner.Login,
-					payload.Repository.Name,
-					payload.PullRequest.Number,
-				)
-				if err != nil {
-					log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
-					return
-				}
-
-				log.Info("Created comment on pull request %s", payload.PullRequest.HTMLURL)
-			}()
-			return http.StatusAccepted, http.StatusText(http.StatusAccepted)
+		if event != "pull_request" {
+			return http.StatusOK, fmt.Sprintf("Event %q has been received but nothing to do", event)
 		}
-		return http.StatusOK, fmt.Sprintf("Event %q has been received but nothing to do", event)
+
+		var payload github.PullRequestEvent
+		err = json.NewDecoder(r.Body).Decode(&payload)
+		if err != nil {
+			return http.StatusBadRequest, fmt.Sprintf("Failed to decode payload: %v", err)
+		}
+		if payload.Installation == nil || payload.Installation.ID == nil {
+			return http.StatusBadRequest, "No installation or installation ID"
+		} else if payload.Action == nil {
+			return http.StatusBadRequest, "No action"
+		}
+
+		switch *payload.Action {
+		case "opened":
+			go handlePullRequestOpen(context.Background(), config.GitHubApp, &payload)
+		case "synchronize":
+			go handlePullRequestSynchronize(context.Background(), config.GitHubApp, &payload)
+		default:
+			return http.StatusOK, fmt.Sprintf("Event %q with action %q has been received but nothing to do", event, payload.Action)
+		}
+		return http.StatusAccepted, http.StatusText(http.StatusAccepted)
 	})
 	f.Run()
 }
 
-func createPullRequestComment(appID, installationID int64, privateKey, owner, repo string, number int) error {
+func newGitHubClient(ctx context.Context, appID, installationID int64, privateKey string) (*github.Client, error) {
 	tr, err := ghinstallation.NewAppsTransport(http.DefaultTransport, appID, []byte(privateKey))
 	if err != nil {
-		return errors.Wrap(err, "new transport")
+		return nil, errors.Wrap(err, "new transport")
 	}
 
 	client := github.NewClient(
@@ -106,13 +83,12 @@ func createPullRequestComment(appID, installationID int64, privateKey, owner, re
 		},
 	)
 
-	ctx := context.Background()
 	token, _, err := client.Apps.CreateInstallationToken(ctx, installationID, nil)
 	if err != nil {
-		return errors.Wrap(err, "create installation access token")
+		return nil, errors.Wrap(err, "create installation access token")
 	}
 	if token.Token == nil || *token.Token == "" {
-		return errors.New("empty token returned")
+		return nil, errors.New("empty token returned")
 	}
 
 	client = github.NewClient(
@@ -125,18 +101,95 @@ func createPullRequestComment(appID, installationID int64, privateKey, owner, re
 			),
 		),
 	)
+	return client, nil
+}
 
-	_, _, err = client.Issues.CreateComment(
+const commentMarker = `<!-- f05a7112-ce8b-4aaf-a203-f850b869431f -->`
+
+func handlePullRequestOpen(ctx context.Context, githubApp conf.GitHubApp, payload *github.PullRequestEvent) {
+	client, err := newGitHubClient(ctx, githubApp.AppID, *payload.Installation.ID, githubApp.PrivateKey)
+	if err != nil {
+		log.Error("Failed to create GitHub client: %v", err)
+		return
+	}
+
+	comment, _, err := client.Issues.CreateComment(
 		ctx,
-		owner,
-		repo,
-		number,
+		*payload.Repo.Owner.Login,
+		*payload.Repo.Name,
+		*payload.PullRequest.Number,
 		&github.IssueComment{
-			Body: github.String("Hello world!"),
+			Body: github.String(commentMarker + "\n\n" + time.Now().Format(time.RFC3339)),
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "create comment")
+		log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		return
 	}
-	return nil
+	log.Info("Created comment %s", *comment.HTMLURL)
+}
+
+func handlePullRequestSynchronize(ctx context.Context, githubApp conf.GitHubApp, payload *github.PullRequestEvent) {
+	client, err := newGitHubClient(ctx, githubApp.AppID, *payload.Installation.ID, githubApp.PrivateKey)
+	if err != nil {
+		log.Error("Failed to create GitHub client: %v", err)
+		return
+	}
+
+	// Iterate over first 100 comments on the pull request and update the previous
+	// one. We don't look beyond 100 comments because it is very unlikely that the
+	// previous comment is not within the first 100 comments.
+	comments, _, err := client.Issues.ListComments(
+		ctx,
+		*payload.Repo.Owner.Login,
+		*payload.Repo.Name,
+		*payload.PullRequest.Number,
+		&github.IssueListCommentsOptions{
+			ListOptions: github.ListOptions{
+				Page:    1,
+				PerPage: 100,
+			},
+		},
+	)
+	if err != nil {
+		log.Error("Failed to list comments on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		return
+	}
+
+	commentBody := commentMarker + "\n\n" + time.Now().Format(time.RFC3339)
+	for _, comment := range comments {
+		if comment.Body == nil || !strings.Contains(*comment.Body, commentMarker) {
+			continue
+		}
+
+		_, _, err = client.Issues.EditComment(
+			ctx,
+			*payload.Repo.Owner.Login,
+			*payload.Repo.Name,
+			*comment.ID,
+			&github.IssueComment{
+				Body: github.String(commentBody),
+			},
+		)
+		if err != nil {
+			log.Error("Failed to edit comment %s: %v", *comment.HTMLURL, err)
+		}
+		log.Info("Edited comment %s", *comment.HTMLURL)
+		return
+	}
+
+	comment, _, err := client.Issues.CreateComment(
+		ctx,
+		*payload.Repo.Owner.Login,
+		*payload.Repo.Name,
+		*payload.PullRequest.Number,
+		&github.IssueComment{
+			Body: github.String(commentBody),
+		},
+	)
+	if err != nil {
+		log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		return
+	}
+	log.Info("Created comment %s", *comment.HTMLURL)
 }
