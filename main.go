@@ -64,7 +64,7 @@ func main() {
 		case "synchronize":
 			go handlePullRequestSynchronize(context.Background(), config.GitHubApp, &payload)
 		default:
-			return http.StatusOK, fmt.Sprintf("Event %q with action %q has been received but nothing to do", event, payload.Action)
+			return http.StatusOK, fmt.Sprintf("Event %q with action %q has been received but nothing to do", event, *payload.Action)
 		}
 		return http.StatusAccepted, http.StatusText(http.StatusAccepted)
 	})
@@ -123,7 +123,7 @@ func handlePullRequestOpen(ctx context.Context, githubApp conf.GitHubApp, payloa
 		},
 	)
 	if err != nil {
-		log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		log.Error("Failed to create comment on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
 		return
 	}
 	log.Info("Created comment %s", *comment.HTMLURL)
@@ -152,7 +152,7 @@ func handlePullRequestSynchronize(ctx context.Context, githubApp conf.GitHubApp,
 		},
 	)
 	if err != nil {
-		log.Error("Failed to list comments on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		log.Error("Failed to list comments on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func handlePullRequestSynchronize(ctx context.Context, githubApp conf.GitHubApp,
 		},
 	)
 	if err != nil {
-		log.Error("Failed to create comment on pull request %s: %v", payload.PullRequest.HTMLURL, err)
+		log.Error("Failed to create comment on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
 		return
 	}
 	log.Info("Created comment %s", *comment.HTMLURL)
