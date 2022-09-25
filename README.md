@@ -37,6 +37,8 @@ Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your 
 	```bash
 	brew install git go go-task/tap/go-task ngrok
 	go install https://github.com/sourcegraph/codenotify@latest
+	
+	# In the root directory of the repository
 	ln -s $(go env GOPATH)/bin/codenotify $(pwd)/.bin/codenotify
 	```
 
@@ -56,7 +58,7 @@ Follow this [magic link](https://github.com/settings/apps/new?name=codenotify-te
 $ task
 ```
 
-By default, the server will listen on port `0.0.0.0:2830`, but you can change it by setting the `FLAMEGO_ADDR` environment variable:
+By default, the server will listen on address `0.0.0.0:2830`, but you can change it by setting the `FLAMEGO_ADDR` environment variable:
 
 ```bash
 $ FLAMEGO_ADDR=localhost:8888 task
