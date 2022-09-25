@@ -56,42 +56,77 @@ func newGitHubClient(ctx context.Context, appID, installationID int64, privateKe
 	return client, *token.Token, nil
 }
 
-func setUpAndRun(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent) (*github.Client, string, error) {
+type actionHandler func(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, client *github.Client, token string) error
+
+func reportCommitStatus(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, handler actionHandler) {
+	client, token, err := newGitHubClient(ctx, config.GitHubApp.AppID, *payload.Installation.ID, config.GitHubApp.PrivateKey)
+	if err != nil {
+		log.Error("Failed to create GitHub client: %v", err)
+		return
+	}
+
+	createStatus := func(state, description string) {
+		_, _, err = client.Repositories.CreateStatus(
+			ctx,
+			*payload.Repo.Owner.Login,
+			*payload.Repo.Name,
+			*payload.PullRequest.Head.SHA,
+			&github.RepoStatus{
+				State:       github.String(state),
+				Description: github.String(description),
+				Context:     github.String("Codenotify.run"),
+			},
+		)
+		if err != nil {
+			log.Error("Failed to create commit status on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
+			return
+		}
+	}
+
+	createStatus("pending", "Running Codenotify")
+	err = handler(ctx, config, payload, client, token)
+	if err != nil {
+		createStatus("error", err.Error())
+		log.Error("Failed to run handler for pull request %s: %v", *payload.PullRequest.HTMLURL, err)
+		return
+	}
+	createStatus("success", "Codenotify ran successfully")
+}
+
+func checkoutAndRun(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, token string) (string, error) {
 	tmpPath := path.Join(os.TempDir(), fmt.Sprintf("codenotify.run-%s-%d", *payload.PullRequest.NodeID, time.Now().Unix()))
 	err := os.MkdirAll(path.Dir(tmpPath), os.ModeDir)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "create temp directory")
+		return "", errors.Wrap(err, "create temp directory")
 	}
 	defer func() { _ = os.RemoveAll(tmpPath) }()
 
-	client, token, err := newGitHubClient(ctx, config.GitHubApp.AppID, *payload.Installation.ID, config.GitHubApp.PrivateKey)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "create GitHub client")
-	}
-
 	cloneURL, err := url.Parse(*payload.Repo.CloneURL)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "parse clone URL")
+		return "", errors.Wrap(err, "parse clone URL")
 	}
 	cloneURL.User = url.UserPassword("x-access-token", token)
 
 	err = checkout(ctx, os.Stdout, tmpPath, cloneURL.String(), *payload.PullRequest.Head.SHA, *payload.PullRequest.Commits)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "checkout pull request")
+		return "", errors.Wrap(err, "checkout pull request")
 	}
 
 	output, err := codenotify(ctx, os.Stdout, config.Codenotify.BinPath, tmpPath, *payload.PullRequest.Base.SHA, *payload.PullRequest.Head.SHA)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "run Codenotify")
+		return "", errors.Wrap(err, "run Codenotify")
 	}
-	return client, output, nil
+	return output, nil
 }
 
-func handlePullRequestOpen(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent) {
-	client, output, err := setUpAndRun(ctx, config, payload)
+func handlePullRequestOpen(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, client *github.Client, token string) error {
+	output, err := checkoutAndRun(ctx, config, payload, token)
 	if err != nil {
-		log.Error("Failed to run set up and run: %v", err)
-		return
+		return errors.Wrap(err, "checkout and run")
+	}
+
+	if strings.Contains(output, "No notifications.") {
+		return nil
 	}
 
 	comment, _, err := client.Issues.CreateComment(
@@ -104,17 +139,17 @@ func handlePullRequestOpen(ctx context.Context, config *conf.Config, payload *gi
 		},
 	)
 	if err != nil {
-		log.Error("Failed to create comment on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
-		return
+		return errors.Wrap(err, "create comment")
 	}
+
 	log.Info("Created comment %s", *comment.HTMLURL)
+	return nil
 }
 
-func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent) {
-	client, output, err := setUpAndRun(ctx, config, payload)
+func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, client *github.Client, token string) error {
+	output, err := checkoutAndRun(ctx, config, payload, token)
 	if err != nil {
-		log.Error("Failed to run set up and run: %v", err)
-		return
+		return errors.Wrap(err, "checkout and run")
 	}
 
 	// Iterate over first 100 comments on the pull request and update the previous
@@ -133,8 +168,7 @@ func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payl
 		},
 	)
 	if err != nil {
-		log.Error("Failed to list comments on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
-		return
+		return errors.Wrap(err, "list comments")
 	}
 
 	for _, comment := range comments {
@@ -152,10 +186,14 @@ func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payl
 			},
 		)
 		if err != nil {
-			log.Error("Failed to edit comment %s: %v", *comment.HTMLURL, err)
+			return errors.Wrap(err, "edit comment")
 		}
 		log.Info("Edited comment %s", *comment.HTMLURL)
-		return
+		return nil
+	}
+
+	if strings.Contains(output, "No notifications.") {
+		return nil
 	}
 
 	comment, _, err := client.Issues.CreateComment(
@@ -168,8 +206,9 @@ func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payl
 		},
 	)
 	if err != nil {
-		log.Error("Failed to create comment on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
-		return
+		return errors.Wrap(err, "create comment")
 	}
+
 	log.Info("Created comment %s", *comment.HTMLURL)
+	return nil
 }

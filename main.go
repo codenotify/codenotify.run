@@ -53,11 +53,15 @@ func main() {
 			return http.StatusBadRequest, "No action"
 		}
 
+		if payload.PullRequest.Draft != nil || !*payload.PullRequest.Draft {
+			return http.StatusOK, "Skip draft pull request"
+		}
+
 		switch *payload.Action {
-		case "opened":
-			go handlePullRequestOpen(context.Background(), config, &payload)
-		case "synchronize":
-			go handlePullRequestSynchronize(context.Background(), config, &payload)
+		case "opened", "ready_for_review":
+			go reportCommitStatus(context.Background(), config, &payload, handlePullRequestOpen)
+		case "synchronize", "reopened":
+			go reportCommitStatus(context.Background(), config, &payload, handlePullRequestSynchronize)
 		default:
 			return http.StatusOK, fmt.Sprintf("Event %q with action %q has been received but nothing to do", event, *payload.Action)
 		}
