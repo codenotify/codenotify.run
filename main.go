@@ -34,6 +34,9 @@ func main() {
 	}
 
 	f := flamego.Classic()
+	f.Get("/", func(c flamego.Context) {
+		c.Redirect("https://github.com/codenotify/codenotify.run")
+	})
 	f.Post("/-/webhook", func(r *http.Request) (int, string) {
 		event := r.Header.Get("X-GitHub-Event")
 		log.Trace("Received event: %s", event)
