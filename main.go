@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/flamego/flamego"
 	"github.com/google/go-github/v45/github"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/codenotify/codenotify.run/internal/conf"
+	"github.com/codenotify/codenotify.run/internal/osutil"
 )
 
 func main() {
@@ -32,11 +34,20 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to load configuration: %v", err)
 	}
+	log.Info("Available on %s", config.Server.ExternalURL)
 
 	f := flamego.Classic()
 	f.Get("/", func(c flamego.Context) {
 		c.Redirect("https://github.com/codenotify/codenotify.run")
 	})
+	f.Get("/runs/{runID}", func(c flamego.Context) ([]byte, error) {
+		logPath := logPathByRunID(config.Server.LogsRootDir, c.Param("runID"))
+		if !osutil.IsFile(logPath) {
+			return []byte("The run log no longer exists"), nil
+		}
+		return os.ReadFile(logPath)
+	})
+
 	f.Post("/-/webhook", func(r *http.Request) (int, string) {
 		event := r.Header.Get("X-GitHub-Event")
 		log.Trace("Received event: %s", event)
