@@ -53,7 +53,7 @@ func main() {
 			return http.StatusBadRequest, "No action"
 		}
 
-		if payload.PullRequest.Draft != nil || !*payload.PullRequest.Draft {
+		if payload.PullRequest.Draft != nil && *payload.PullRequest.Draft {
 			return http.StatusOK, "Skip draft pull request"
 		}
 
