@@ -37,7 +37,7 @@ Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your 
 	```bash
 	brew install git go go-task/tap/go-task ngrok
 	go install https://github.com/sourcegraph/codenotify@latest
-	
+
 	# In the root directory of the repository
 	ln -s $(go env GOPATH)/bin/codenotify $(pwd)/.bin/codenotify
 	```
@@ -52,6 +52,16 @@ $ ngrok http 2830
 
 Follow this [magic link](https://github.com/settings/apps/new?name=codenotify-test&url=https://codenotify.run&webhook_active=true&webhook_url=https://%3Cyour%20ngrok%20domain%3E/-/webhook&statuses=write&contents=read&pull_requests=write&emails=read&events[]=pull_request) to create your test GitHub App.
 
+Once you have created your test GitHub App, put the **App ID** and [**Private key**](https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key) in the `custom/conf/app.ini` file:
+
+```ini
+[github_app]
+APP_ID = 123456
+PRIVATE_KEY = """-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----"""
+```
+
 ### Step 3: Start the server
 
 ```bash
@@ -64,7 +74,12 @@ By default, the server will listen on address `0.0.0.0:2830`, but you can change
 $ FLAMEGO_ADDR=localhost:8888 task
 ```
 
-Don't forget to restart your `ngrok` if you changed the port!
+Don't forget to restart your `ngrok` and update your `custom/conf/app.ini` file before you changed the port!
+
+```ini
+[server]
+EXTERNAL_URL = http://localhost:8888
+```
 
 ## Credits
 
