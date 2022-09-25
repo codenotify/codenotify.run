@@ -5,6 +5,8 @@
 package conf
 
 import (
+	"strings"
+
 	"github.com/go-ini/ini"
 	"github.com/pkg/errors"
 
@@ -21,6 +23,11 @@ var (
 
 // Config contains all the configuration.
 type Config struct {
+	// Server contains the server configuration.
+	Server struct {
+		ExternalURL string `ini:"EXTERNAL_URL"`
+		LogsRootDir string
+	}
 	// GitHubApp contains the GitHub App configuration.
 	GitHubApp struct {
 		AppID        int64  `ini:"APP_ID"`
@@ -54,10 +61,14 @@ func Load() (*Config, error) {
 	file.NameMapper = ini.SnackCase
 
 	var config Config
-	if err = file.Section("github_app").MapTo(&config.GitHubApp); err != nil {
+	if err = file.Section("server").MapTo(&config.Server); err != nil {
+		return nil, errors.Wrap(err, `mapping "[server]" section`)
+	} else if err = file.Section("github_app").MapTo(&config.GitHubApp); err != nil {
 		return nil, errors.Wrap(err, `mapping "[github_app]" section`)
 	} else if err = file.Section("codenotify").MapTo(&config.Codenotify); err != nil {
 		return nil, errors.Wrap(err, `mapping "[codenotify]" section`)
 	}
+
+	config.Server.ExternalURL = strings.TrimSuffix(config.Server.ExternalURL, "/")
 	return &config, nil
 }
