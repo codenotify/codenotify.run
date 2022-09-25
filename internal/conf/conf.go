@@ -21,15 +21,17 @@ var (
 
 // Config contains all the configuration.
 type Config struct {
-	GitHubApp
-}
-
-// GitHubApp contains the GitHub App configuration.
-type GitHubApp struct {
-	AppID        int64  `ini:"APP_ID"`
-	ClientID     string `ini:"CLIENT_ID"`
-	ClientSecret string
-	PrivateKey   string
+	// GitHubApp contains the GitHub App configuration.
+	GitHubApp struct {
+		AppID        int64  `ini:"APP_ID"`
+		ClientID     string `ini:"CLIENT_ID"`
+		ClientSecret string
+		PrivateKey   string
+	}
+	// Codenotify contains the Codenotify configuration.
+	Codenotify struct {
+		BinPath string
+	}
 }
 
 // Load loads configuration from file.
@@ -54,6 +56,8 @@ func Load() (*Config, error) {
 	var config Config
 	if err = file.Section("github_app").MapTo(&config.GitHubApp); err != nil {
 		return nil, errors.Wrap(err, `mapping "[github_app]" section`)
+	} else if err = file.Section("codenotify").MapTo(&config.Codenotify); err != nil {
+		return nil, errors.Wrap(err, `mapping "[codenotify]" section`)
 	}
 	return &config, nil
 }
