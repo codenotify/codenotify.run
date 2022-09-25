@@ -7,8 +7,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -79,7 +79,7 @@ func reportCommitStatus(ctx context.Context, config *conf.Config, payload *githu
 			&github.RepoStatus{
 				State:       github.String(state),
 				TargetURL:   targetURL,
-				Description: github.String(fmt.Sprintf("%s in %s", description, time.Since(started))),
+				Description: github.String(fmt.Sprintf("%s in %s", description, time.Since(started).Truncate(time.Millisecond))),
 				Context:     github.String("Codenotify.run"),
 			},
 		)
@@ -119,9 +119,8 @@ func checkoutAndRun(ctx context.Context, config *conf.Config, payload *github.Pu
 	cloneURL.User = url.UserPassword("x-access-token", token)
 
 	// Generate a run ID and open a log file for streaming output.
-	entropy := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ms := ulid.Timestamp(time.Now())
-	id, err := ulid.New(ms, entropy)
+	id, err := ulid.New(ms, rand.Reader)
 	if err != nil {
 		return "", "", errors.Wrap(err, "generate run ID")
 	}
@@ -136,7 +135,7 @@ func checkoutAndRun(ctx context.Context, config *conf.Config, payload *github.Pu
 		}
 
 		data := bytes.ReplaceAll(buf.Bytes(), []byte(token), []byte("<REDACTED>"))
-		err = os.WriteFile(logPath, data, 0644)
+		err = os.WriteFile(logPath, data, 0600)
 		if err != nil {
 			log.Error("Failed to write log file: %v", err)
 			return
