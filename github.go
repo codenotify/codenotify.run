@@ -125,6 +125,10 @@ func handlePullRequestOpen(ctx context.Context, config *conf.Config, payload *gi
 		return errors.Wrap(err, "checkout and run")
 	}
 
+	if strings.Contains(output, "No notifications.") {
+		return nil
+	}
+
 	comment, _, err := client.Issues.CreateComment(
 		ctx,
 		*payload.Repo.Owner.Login,
@@ -185,6 +189,10 @@ func handlePullRequestSynchronize(ctx context.Context, config *conf.Config, payl
 			return errors.Wrap(err, "edit comment")
 		}
 		log.Info("Edited comment %s", *comment.HTMLURL)
+		return nil
+	}
+
+	if strings.Contains(output, "No notifications.") {
 		return nil
 	}
 
