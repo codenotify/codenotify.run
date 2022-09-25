@@ -78,7 +78,7 @@ func reportCommitStatus(ctx context.Context, config *conf.Config, payload *githu
 			},
 		)
 		if err != nil {
-			log.Error("Failed to create commit status on pull request: %v", *payload.PullRequest.HTMLURL, err)
+			log.Error("Failed to create commit status on pull request %s: %v", *payload.PullRequest.HTMLURL, err)
 			return
 		}
 	}
