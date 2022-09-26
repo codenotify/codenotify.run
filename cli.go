@@ -18,15 +18,16 @@ import (
 
 func run(ctx context.Context, w io.Writer, command string, args ...string) ([]byte, error) {
 	cmdWithArgs := strings.Join(append([]string{command}, args...), " ")
+	_, _ = fmt.Fprintln(w, cmdWithArgs)
 
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+
 	out, err := cmd.CombinedOutput()
+	_, _ = fmt.Fprintln(w, string(out))
 	if err != nil {
 		return nil, errors.Wrapf(err, "running command %q", cmdWithArgs)
 	}
-	_, _ = fmt.Fprintln(w, cmdWithArgs)
-	_, _ = fmt.Fprintln(w, string(out))
 	return out, nil
 }
 
@@ -48,11 +49,24 @@ func checkout(ctx context.Context, w io.Writer, repoPath, remoteURL, headCommit 
 		"-C", repoPath,
 		"-c", "protocol.version=2",
 		"fetch", "--no-tags", "--prune", "--no-recurse-submodules", "--quiet",
-		"--deepen="+strconv.Itoa(commitsCount),
+		"--depth=1",
 		"origin", headCommit,
 	)
 	if err != nil {
-		return fmt.Errorf("fetch: %v - %s", err, out)
+		return fmt.Errorf("fetch origin: %v - %s", err, out)
+	}
+
+	_, err = run(
+		ctx,
+		w,
+		"git",
+		"-C", repoPath,
+		"-c", "protocol.version=2",
+		"fetch", "--no-tags", "--prune", "--no-recurse-submodules", "--quiet",
+		"--deepen="+strconv.Itoa(commitsCount),
+	)
+	if err != nil {
+		return fmt.Errorf("fetch deepen: %v - %s", err, out)
 	}
 	return nil
 }
@@ -71,7 +85,7 @@ func codenotify(ctx context.Context, w io.Writer, binPath, repoPath, baseRef, he
 		"--verbose",
 	)
 	if err != nil {
-		return "", errors.Wrap(err, "run")
+		return "", fmt.Errorf("run: %v - %s", err, output)
 	}
 	return string(output), nil
 }
