@@ -71,7 +71,7 @@ func checkout(ctx context.Context, w io.Writer, repoPath, remoteURL, headCommit 
 	return nil
 }
 
-func codenotify(ctx context.Context, w io.Writer, binPath, repoPath, baseRef, headRef string) (string, error) {
+func codenotify(ctx context.Context, w io.Writer, binPath, repoPath, baseRef, headRef, author string) (string, error) {
 	output, err := run(
 		ctx,
 		w,
@@ -79,6 +79,7 @@ func codenotify(ctx context.Context, w io.Writer, binPath, repoPath, baseRef, he
 		"--cwd", repoPath,
 		"--baseRef", baseRef,
 		"--headRef", headRef,
+		"--author", "@"+author,
 		"--format=markdown",
 		"--filename=CODENOTIFY",
 		"--subscriber-threshold=10",
