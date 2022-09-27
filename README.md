@@ -27,7 +27,7 @@ Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your 
 - [Go](https://golang.org/doc/install) (v1.19 or higher)
 - [Task](https://github.com/go-task/task) (v3)
 - [ngrok](https://ngrok.com/)
-- [Codenotify](https://github.com/sourcegraph/codenotify) (v0.6.3 or higher)
+- [Codenotify](https://github.com/sourcegraph/codenotify) (v0.6.4 or higher)
 
 #### macOS
 
@@ -36,7 +36,7 @@ Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your 
 
 	```bash
 	brew install git go go-task/tap/go-task ngrok
-	go install https://github.com/sourcegraph/codenotify@latest
+	go install https://github.com/sourcegraph/codenotify@v0.6.4
 
 	# In the root directory of the repository
 	ln -s $(go env GOPATH)/bin/codenotify $(pwd)/.bin/codenotify

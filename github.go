@@ -106,7 +106,7 @@ func logPathByRunID(rootDir, runID string) string {
 
 func checkoutAndRun(ctx context.Context, config *conf.Config, payload *github.PullRequestEvent, token string) (output string, runID string, err error) {
 	tmpPath := fmt.Sprintf("tmp/repos/%s-%d", *payload.PullRequest.NodeID, time.Now().Unix())
-	err = os.MkdirAll(path.Dir(tmpPath), os.ModeDir)
+	err = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err != nil {
 		return "", "", errors.Wrap(err, "create temp directory")
 	}
@@ -147,7 +147,15 @@ func checkoutAndRun(ctx context.Context, config *conf.Config, payload *github.Pu
 		return "", id.String(), errors.Wrap(err, "checkout pull request")
 	}
 
-	output, err = codenotify(ctx, &buf, config.Codenotify.BinPath, tmpPath, *payload.PullRequest.Base.SHA, *payload.PullRequest.Head.SHA)
+	output, err = codenotify(
+		ctx,
+		&buf,
+		config.Codenotify.BinPath,
+		tmpPath,
+		*payload.PullRequest.Base.SHA,
+		*payload.PullRequest.Head.SHA,
+		*payload.PullRequest.User.Login,
+	)
 	if err != nil {
 		return "", id.String(), errors.Wrap(err, "run Codenotify")
 	}
