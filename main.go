@@ -34,7 +34,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to load configuration: %v", err)
 	}
-	log.Info("Available on %s", config.Server.ExternalURL)
 
 	f := flamego.Classic()
 	f.Get("/", func(c flamego.Context) {
@@ -81,5 +80,7 @@ func main() {
 		}
 		return http.StatusAccepted, http.StatusText(http.StatusAccepted)
 	})
+
+	log.Info("Available on %s", config.Server.ExternalURL)
 	f.Run()
 }
