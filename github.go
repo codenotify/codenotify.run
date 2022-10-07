@@ -7,7 +7,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,6 +29,22 @@ import (
 
 	"github.com/codenotify/codenotify.run/internal/conf"
 )
+
+// validateGitHubWebhookSignature256 returns true if the signature matches the
+// HMAC hex digested SHA256 hash of the body using the given key.
+func validateGitHubWebhookSignature256(signature, key string, body []byte) (bool, error) {
+	signature = strings.TrimPrefix(signature, "sha256=")
+	m := hmac.New(sha256.New, []byte(key))
+	if _, err := m.Write(body); err != nil {
+		return false, err
+	}
+	got := hex.EncodeToString(m.Sum(nil))
+
+	// NOTE: Use constant time string comparison helps mitigate certain timing
+	// attacks against regular equality operators, see
+	// https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks#validating-payloads-from-github
+	return subtle.ConstantTimeCompare([]byte(signature), []byte(got)) == 1, nil
+}
 
 func newGitHubClient(ctx context.Context, appID, installationID int64, privateKey string) (*github.Client, string, error) {
 	tr, err := ghinstallation.NewAppsTransport(http.DefaultTransport, appID, []byte(privateKey))
