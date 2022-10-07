@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -55,8 +56,22 @@ func main() {
 			return http.StatusOK, fmt.Sprintf("Event %q has been received but nothing to do", event)
 		}
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			return http.StatusInternalServerError, fmt.Sprintf("Failed to read request body: %v", err)
+		}
+
+		if config.GitHubApp.WebhookSecret != "" {
+			ok, err := validateGitHubWebhookSignature256(r.Header.Get("X-Hub-Signature-256"), config.GitHubApp.WebhookSecret, body)
+			if err != nil {
+				return http.StatusInternalServerError, fmt.Sprintf("Failed to validate signature: %v", err)
+			} else if !ok {
+				return http.StatusBadRequest, `Mismatched payload signature for "X-Hub-Signature-256"`
+			}
+		}
+
 		var payload github.PullRequestEvent
-		err = json.NewDecoder(r.Body).Decode(&payload)
+		err = json.Unmarshal(body, &payload)
 		if err != nil {
 			return http.StatusBadRequest, fmt.Sprintf("Failed to decode payload: %v", err)
 		}

@@ -38,7 +38,7 @@ $ mkdir -p custom/conf
 $ touch custom/conf/app.ini
 ```
 
-Please refer to [Local development > Step 2: Create a test GitHub App](#step-2-create-a-test-github-app) for creating a GitHub App, setting up a reverse proxy and filling out necessary configuration options.
+Please refer to [Local development > Step 2: Create a test GitHub App](#step-2-create-a-test-github-app) for creating a GitHub App, setting up a reverse proxy and filling out necessary configuration options. View [`conf/app.ini`](conf/app.ini) for all available configuration options.
 
 > **Note**
 > The [Caddy web server](https://caddyserver.com/) is recommended for production use with automatic HTTPS.

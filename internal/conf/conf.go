@@ -30,10 +30,11 @@ type Config struct {
 	}
 	// GitHubApp contains the GitHub App configuration.
 	GitHubApp struct {
-		AppID        int64  `ini:"APP_ID"`
-		ClientID     string `ini:"CLIENT_ID"`
-		ClientSecret string
-		PrivateKey   string
+		AppID         int64  `ini:"APP_ID"`
+		ClientID      string `ini:"CLIENT_ID"`
+		ClientSecret  string
+		PrivateKey    string
+		WebhookSecret string
 	}
 	// Codenotify contains the Codenotify configuration.
 	Codenotify struct {
