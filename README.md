@@ -17,7 +17,41 @@ Using a personal access token would of course solve the first problem, but a per
 
 ## How?
 
-Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your repositories and add some [CODENOTIFY files](https://github.com/sourcegraph/codenotify#codenotify-files).
+### Free public server
+
+Free public server comes with absolutely shitty availability.
+
+1. Install the [Codenotify](https://github.com/apps/codenotify) GitHub App on your repositories.
+2. Add some [CODENOTIFY files](https://github.com/sourcegraph/codenotify#codenotify-files).
+
+### Run your own server
+
+Docker images for the Codenotify.run server are available both on [Docker Hub](https://hub.docker.com/r/unknwon/codenotify.run) and [GitHub Container Registry](https://github.com/codenotify/codenotify.run/pkgs/container/codenotify.run).
+
+> **Note**
+> The `latest` tag represents the latest build from the `main` branch.
+
+You need to create a `custom` directory for the configuration file `app.ini`:
+
+```bash
+$ mkdir -p custom/conf
+$ touch custom/conf/app.ini
+```
+
+Please refer to [Local development > Step 2: Create a test GitHub App](#step-2-create-a-test-github-app) for creating a GitHub App, setting up a reverse proxy and filling out necessary configuration options.
+
+> **Note**
+> The [Caddy web server](https://caddyserver.com/) is recommended for production use with automatic HTTPS.
+
+Then volume the `custom` directory into the Docker container for it being able to start (`/app/codenotify.run/custom` is the path inside the container):
+
+```bash
+$ docker run \
+    --name=codenotify.run \
+    -p 12830:2830 \
+    -v $(pwd)/custom:/app/codenotify.run/custom \
+    unknwon/codenotify.run
+```
 
 ## Local development
 
