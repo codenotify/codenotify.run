@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.1.0
-	github.com/flamego/flamego v1.5.0
+	github.com/flamego/flamego v1.7.0
 	github.com/go-ini/ini v1.67.0
 	github.com/google/go-github/v45 v45.2.0
 	github.com/oklog/ulid/v2 v2.1.0
@@ -15,7 +15,7 @@ require (
 )
 
 require (
-	github.com/alecthomas/participle/v2 v2.0.0-alpha9 // indirect
+	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
