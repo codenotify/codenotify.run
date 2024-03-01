@@ -9,7 +9,7 @@ require (
 	github.com/google/go-github/v45 v45.2.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/oauth2 v0.16.0
 	unknwon.dev/clog/v2 v2.2.0
 )
