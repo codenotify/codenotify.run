@@ -1,4 +1,4 @@
-FROM golang:alpine3.16 AS binarybuilder
+FROM golang:alpine3.19 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
     build-deps \
     build-base \
@@ -17,7 +17,7 @@ RUN task build
 # Install Codenotify
 RUN GOBIN=/dist/.bin go install github.com/sourcegraph/codenotify@v0.6.4
 
-FROM alpine:3.16
+FROM alpine:3.19
 RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
   && apk --no-cache --no-progress add \
   ca-certificates \
