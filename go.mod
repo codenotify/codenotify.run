@@ -1,11 +1,10 @@
 module github.com/codenotify/codenotify.run
 
 go 1.22
-
-toolchain go1.22.1
+toolchain go1.22.5
 
 require (
-	github.com/bradleyfalzon/ghinstallation/v2 v2.13.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.14.0
 	github.com/flamego/flamego v1.9.5
 	github.com/go-ini/ini v1.67.0
 	github.com/google/go-github/v45 v45.2.0
@@ -25,7 +24,7 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
-	github.com/google/go-github/v68 v68.0.0 // indirect
+	github.com/google/go-github/v69 v69.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
