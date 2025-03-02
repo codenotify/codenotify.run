@@ -42,7 +42,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.22.x ]
+        go-version: [ 1.24.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
