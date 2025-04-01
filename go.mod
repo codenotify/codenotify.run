@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.14.0
-	github.com/flamego/flamego v1.9.5
+	github.com/flamego/flamego v1.9.6
 	github.com/go-ini/ini v1.67.0
 	github.com/google/go-github/v45 v45.2.0
 	github.com/oklog/ulid/v2 v2.1.0
