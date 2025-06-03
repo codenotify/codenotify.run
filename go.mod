@@ -7,7 +7,7 @@ require (
 	github.com/flamego/flamego v1.9.5
 	github.com/go-ini/ini v1.67.0
 	github.com/google/go-github/v45 v45.2.0
-	github.com/oklog/ulid/v2 v2.1.0
+	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.29.0
