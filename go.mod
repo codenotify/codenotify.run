@@ -1,6 +1,6 @@
 module github.com/codenotify/codenotify.run
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.16.0
@@ -10,7 +10,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.35.0
 	unknwon.dev/clog/v2 v2.2.0
 )
 
